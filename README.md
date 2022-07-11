@@ -13,7 +13,10 @@ npm install save-dev dotenv
 ```
 npm install @openzeppelin/contracts
 ```
-
+- ### ERC721A
+```
+npm install --save-dev erc721a
+```
 
 
 
@@ -27,7 +30,7 @@ npm install @openzeppelin/contracts
 ```
 npx hardhat compile
 ```
-### If it has been compiled before, you can clear the cache through 'clean'
+If it has been compiled before, you can clear the cache through 'clean'
 ```
 npx hardhat clean
 ```
