@@ -30,12 +30,15 @@ import "@openzeppelin/contracts/utils/Address.sol";
 contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     using Address for address payable;
 
-    uint public maxSupply = 10000;
+    uint public constant maxSupply = 10000;
     uint public price = 0.02 ether;
 
     bool private publicSale = false;
     bool private whitelistSale = false;
     bool private paused = false;
+
+    // Optional mapping for token URIs
+    mapping (uint256 => string) private _tokenURIs;
 
     constructor() ERC721A("RabbitLeader", "RL") {}
 
@@ -44,34 +47,44 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         _;
     }
 
-    function publicMint(uint quantity) external payable  {
+    function publicMint(uint quantity) external payable nonReentrant lockRabbitLeader {
         require(publicSale, "The publicSale is Failed");
         _safeMint(msg.sender, quantity);
     }
 
-    function whitelistMint(uint256 quantity, bytes32[] calldata _merkleProof) external payable {
+    function whitelistMint(
+        uint256 quantity, 
+        bytes32[] calldata _merkleProof) 
+        external 
+        payable 
+        nonReentrant 
+        lockRabbitLeader
+    {
         require(whitelistSale, "The whitelistSale is Failed");
+        _safeMint(msg.sender, quantity);
     }
 
     function setPrice(uint _price) external onlyOwner {
         price = _price;
     }
 
-    function setSupply(uint _supply) external onlyOwner {
-        maxSupply = _supply;
-    }
-
     function _baseURI() internal view virtual override returns (string memory) {
         return "https://www.rabbitleader.io/"; // gas saving
     }
 
-   function tokenURI(uint256 tokenId) public view virtual override(ERC721A) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view virtual override(ERC721A) returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         string memory baseURI = _baseURI();
-        return bytes(baseURI).length != 0 ? string(abi.encodePacked(baseURI, _toString(tokenId))) : '';
+        string memory cid = _tokenURIs[tokenId];
+        return bytes(baseURI).length != 0 ? string(abi.encodePacked(baseURI, cid)) : '';
     }
 
-    function withdraw(uint256 amount) external onlyOwner lockRabbitLeader {
+    function setTokenURL(uint256 tokenId, string memory _tokenURI) external virtual {
+        if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
+        _tokenURIs[tokenId] = _tokenURI;
+    }
+
+    function withdraw(uint256 amount) external onlyOwner lockRabbitLeader nonReentrant {
         require(amount > 0, "The Amount is null");
         payable(_msgSender()).sendValue(amount);
     }
