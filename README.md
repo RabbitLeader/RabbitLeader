@@ -71,14 +71,17 @@ npx hardhat test
 ```
 and you will see the following test results
 ```
-  Test RabbitLeader
-    ✔ Should publicMint success (876ms)
+ Test RabbitLeader
+    ✔ Should onlyOwner can set publicSale enable (855ms)
+    ✔ Should publicMint success (57ms)
     ✔ Should return RabbitLeader symbol
-    ✔ Should return a tokenUrl (42ms)
+    ✔ Should return a tokenURI (54ms)
     ✔ Should onlyOwner can withdraw contracts balances
+    ✔ Should allows the owner to paused the contract
+    ✔ Should not allow other owners to paused the contract
 
 
-  4 passing (936ms)
+  7 passing (1s)
 ```
 
 
