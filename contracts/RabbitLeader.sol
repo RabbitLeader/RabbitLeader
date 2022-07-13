@@ -139,8 +139,8 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Return the toeknURI for the `tokenid`
-     * Redesigned `toeknRUI` to be compatible with Rarible
+     * @dev Return the tokenURI for the `tokenid`
+     * Redesigned tokenURI to be compatible with Rarible
      */
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
