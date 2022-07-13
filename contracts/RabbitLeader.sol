@@ -47,11 +47,15 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     bool private isFreeMint = false;
     bool private paused = false;
 
-
+    string private baseURI;
+    string private baseSuffix;
     // Optional mapping for token URIs
     mapping (uint256 => string) private _tokenURIs;
  
-    constructor() ERC721A("RabbitLeader", "RL") {}
+    constructor() ERC721A("RabbitLeader", "RL") {
+        baseURI = "https://";
+        baseSuffix = ".ipfs.nftstorage.link";
+    }
 
     // Modifier Ensure that the caller is a real user
     modifier callerIsUers() {
@@ -134,7 +138,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
      * @dev Return the baseURI for the token
      */
     function _baseURI() internal view virtual override returns (string memory) {
-        return "https://"; // gas saving
+        return baseURI;
     }
 
     /**
@@ -143,13 +147,13 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
      */
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
-        string memory baseURI = _baseURI();
-        // Define suffixes directly from memory
-        string memory suffix = ".ipfs.nftstorage.link";
+        string memory base_URI = _baseURI();
+        string memory suffix = baseSuffix;
+
         return bytes(baseURI).length != 0
                 ? string(
                     abi.encodePacked(
-                        baseURI,
+                        base_URI,
                         _tokenURIs[tokenId],
                         suffix)): '';
     }
@@ -174,5 +178,13 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
 
     function setIsFreeMint(bool _isFreeMint) external onlyOwner {
         isFreeMint = _isFreeMint;
+    }
+
+    function setBaseSuffix(string memory suffix) external onlyOwner {
+        baseSuffix = suffix;
+    }
+
+    function setBaseURI(string memory baseURI_) external onlyOwner {
+        baseURI = baseURI_;
     }
 }
