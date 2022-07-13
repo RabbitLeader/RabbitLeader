@@ -6,6 +6,7 @@ import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  *
@@ -27,74 +28,151 @@ import "@openzeppelin/contracts/utils/Address.sol";
  */
 
 
+error AlreadyMaxFreeMint();
+error AlreadyMaxSupply();
+error AlreadyMaxPublicMintSupply();
+
 contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     using Address for address payable;
+    using Strings for string;
 
-    uint public constant maxSupply = 10000;
-    uint public price = 0.02 ether;
+    uint256 public freeMintCounter;
+    uint256 public publicMintCounter;
 
-    bool private publicSale = false;
-    bool private whitelistSale = false;
+    uint256 public constant maxSupply = 10000;
+    uint256 public constant maxFreeMint = 500;
+    uint256 public maxFreePerTx = 1;
+    uint256 public price = 0.02 ether;
+
+    bool private isPublicSale = false;
+    bool private isFreeMint = false;
     bool private paused = false;
 
+
     // Optional mapping for token URIs
-    mapping (uint256 => string) private _tokenURIs;
+    mapping (uint256 => bytes) private _tokenURIs;
+    
+    
 
     constructor() ERC721A("RabbitLeader", "RL") {}
 
+    // Modifier Ensure that the caller is a real user
+    modifier callerIsUers() {
+        require(msg.sender == tx.origin);
+        _;
+    }
+
+    // Modifier Stop of important contract functions in the event of an accident
     modifier lockRabbitLeader() {
         require(!paused, "The RabbitLeader Contract had locked");
         _;
     }
 
-    function publicMint(uint quantity) external payable nonReentrant lockRabbitLeader {
-        require(publicSale, "The publicSale is Failed");
-        _safeMint(msg.sender, quantity);
+    // Modifier Calculate mint cost, cost = price * quantity
+    modifier mintPriceCompliance(uint256 mintQuantity) {
+        require(msg.value >= price * mintQuantity);
+        _;
     }
 
-    function whitelistMint(
-        uint256 quantity, 
-        bytes32[] calldata _merkleProof) 
-        external 
-        payable 
-        nonReentrant 
+    /**
+     * @dev Mint for early RabbitLeader contributors or real users
+     * FreeMint before publicMint. so just check if `token` exists for each user
+     * 
+     * requirements:
+     * - The user can only freeMint one `token`
+     * - Reject any contract to freeMint
+     */
+    function freeMint(
+        uint256 quantity
+    )
+        external payable
+        nonReentrant
         lockRabbitLeader
-    {
-        require(whitelistSale, "The whitelistSale is Failed");
-        _safeMint(msg.sender, quantity);
+        callerIsUers {
+        require(isFreeMint, "The freeMint is Failed");
+        require(quantity > 0 && quantity <= maxFreeMint);
+
+        uint currentFreeMintCounter = freeMintCounter;
+        if (currentFreeMintCounter <= maxFreeMint) revert AlreadyMaxFreeMint();
+        if (totalSupply() + quantity <= maxSupply) revert AlreadyMaxSupply();
+        require(balanceOf(msg.sender) == 0, "The User have freeMint");
+        
+        _mint(msg.sender, quantity);
+        ++freeMintCounter;
+    }
+    
+    /**
+     * @dev When the owner setup `isPublicSale`, publicMint start working
+     */
+    function publicMint(
+        uint quantity
+    )
+        external payable
+        callerIsUers
+        nonReentrant
+        lockRabbitLeader
+        mintPriceCompliance(quantity) {
+        require(isPublicSale, "The publicSale is Failed");
+        // Subtract the number of free mint parts
+        uint currentPublicMintCounter = publicMintCounter;
+        if (currentPublicMintCounter <= maxSupply - maxFreeMint) revert AlreadyMaxPublicMintSupply();
+
+        if (totalSupply() + quantity <= maxSupply) revert AlreadyMaxSupply();
+
+        // Use `mint` instead of `safeMint`, because there is no need to check.
+        // see {Openzeppelin-onERC721Received}
+        // `callerIsUers` make sure the recipient must be a real user
+        _mint(msg.sender, quantity);
+        // gas saving
+        ++publicMintCounter;
     }
 
     function setPrice(uint _price) external onlyOwner {
         price = _price;
     }
 
+    /**
+     * @dev Return The baseURI for the token
+     */
     function _baseURI() internal view virtual override returns (string memory) {
-        return "https://www.rabbitleader.io/"; // gas saving
+        return "https://ipfs/"; // gas saving
     }
 
-    function tokenURI(uint256 tokenId) public view virtual override(ERC721A) returns (string memory) {
+    /**
+     * @dev Return the toeknURI for the `tokenid`
+     * Redesigned `toeknRUI` to be compatible with Rarible
+     */
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         string memory baseURI = _baseURI();
-        string memory cid = _tokenURIs[tokenId];
-        return bytes(baseURI).length != 0 ? string(abi.encodePacked(baseURI, cid)) : '';
+        return bytes(baseURI).length != 0 
+                ? string(
+                    abi.encodePacked(
+                        baseURI,
+                        _tokenURIs[tokenId],
+                        ".json"))
+                            : '';
     }
 
-    function setTokenURL(uint256 tokenId, string memory _tokenURI) external virtual {
+    function setTokenURI(uint256 tokenId, bytes calldata cid) external virtual {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
-        _tokenURIs[tokenId] = _tokenURI;
+        _tokenURIs[tokenId] = cid;
     }
 
-    function withdraw(uint256 amount) external onlyOwner lockRabbitLeader nonReentrant {
-        require(amount > 0, "The Amount is null");
-        payable(_msgSender()).sendValue(amount);
+    function withdraw() external onlyOwner lockRabbitLeader nonReentrant {
+        uint balance = address(this).balance;
+        payable(_msgSender()).sendValue(balance);
     }
 
-    function whenPaused(bool _paused) external onlyOwner {
+    function pause(bool _paused) external onlyOwner {
         paused = _paused;
     }
 
     function setPublicSale(bool _publicSaleStatus) external onlyOwner {
-        publicSale = _publicSaleStatus;
+        isPublicSale = _publicSaleStatus;
     }
 
+    function setIsFreeMint(bool _isFreeMint) external onlyOwner {
+        isFreeMint = _isFreeMint;
+    }
 }
