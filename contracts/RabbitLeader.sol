@@ -41,7 +41,6 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
 
     uint256 public constant maxSupply = 10000;
     uint256 public constant maxFreeMint = 500;
-    uint256 public maxFreePerTx = 1;
     uint256 public price = 0.02 ether;
 
     bool private isPublicSale = false;
