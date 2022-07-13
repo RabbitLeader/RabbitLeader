@@ -50,9 +50,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
 
     // Optional mapping for token URIs
     mapping (uint256 => bytes) private _tokenURIs;
-    
-    
-
+ 
     constructor() ERC721A("RabbitLeader", "RL") {}
 
     // Modifier Ensure that the caller is a real user
