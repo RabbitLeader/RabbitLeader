@@ -94,7 +94,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         uint currentFreeMintCounter = freeMintCounter;
         if (currentFreeMintCounter <= maxFreeMint) revert AlreadyMaxFreeMint();
         if (totalSupply() + quantity <= maxSupply) revert AlreadyMaxSupply();
-        require(balanceOf(msg.sender) == 0, "The User have freeMint");
+        require(balanceOf(msg.sender) == 0, "The user had freeMint");
         
         _mint(msg.sender, quantity);
         ++freeMintCounter;
