@@ -49,7 +49,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
 
 
     // Optional mapping for token URIs
-    mapping (uint256 => bytes) private _tokenURIs;
+    mapping (uint256 => string) private _tokenURIs;
  
     constructor() ERC721A("RabbitLeader", "RL") {}
 
@@ -88,9 +88,10 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         callerIsUers {
         require(isFreeMint, "The freeMint is Failed");
         require(quantity > 0 && quantity <= maxFreeMint);
-
-        uint currentFreeMintCounter = freeMintCounter;
-        if (currentFreeMintCounter <= maxFreeMint) revert AlreadyMaxFreeMint();
+        unchecked {
+            uint currentFreeMintCounter = freeMintCounter;
+            if (currentFreeMintCounter + quantity <= maxFreeMint) revert AlreadyMaxFreeMint();   
+        }
         if (totalSupply() + quantity <= maxSupply) revert AlreadyMaxSupply();
         require(balanceOf(msg.sender) == 0, "The user had freeMint");
         
@@ -111,9 +112,10 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         mintPriceCompliance(quantity) {
         require(isPublicSale, "The publicSale is Failed");
         // Subtract the number of free mint parts
-        uint currentPublicMintCounter = publicMintCounter;
-        if (currentPublicMintCounter <= maxSupply - maxFreeMint) revert AlreadyMaxPublicMintSupply();
-
+        unchecked {
+            uint currentPublicMintCounter = publicMintCounter;
+            if (currentPublicMintCounter + quantity <= maxSupply - maxFreeMint) revert AlreadyMaxPublicMintSupply();   
+        }
         if (totalSupply() + quantity <= maxSupply) revert AlreadyMaxSupply();
 
         // Use `mint` instead of `safeMint`, because there is no need to check.
@@ -132,7 +134,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
      * @dev Return the baseURI for the token
      */
     function _baseURI() internal view virtual override returns (string memory) {
-        return "https://ipfs/"; // gas saving
+        return "https://"; // gas saving
     }
 
     /**
@@ -142,16 +144,17 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         string memory baseURI = _baseURI();
-        return bytes(baseURI).length != 0 
+        // Define suffixes directly from memory
+        string memory suffix = ".ipfs.nftstorage.link";
+        return bytes(baseURI).length != 0
                 ? string(
                     abi.encodePacked(
                         baseURI,
                         _tokenURIs[tokenId],
-                        ".json"))
-                            : '';
+                        suffix)): '';
     }
 
-    function setTokenURI(uint256 tokenId, bytes calldata cid) external virtual {
+    function _setTokenURI(uint256 tokenId, string memory cid) internal virtual onlyOwner {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         _tokenURIs[tokenId] = cid;
     }
