@@ -129,7 +129,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Return The baseURI for the token
+     * @dev Return the baseURI for the token
      */
     function _baseURI() internal view virtual override returns (string memory) {
         return "https://ipfs/"; // gas saving
