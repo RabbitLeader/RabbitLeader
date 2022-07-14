@@ -27,6 +27,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
  */
 
 
+
 error AlreadyMaxFreeMint();
 error AlreadyMaxSupply();
 error AlreadyMaxPublicMintSupply();
@@ -51,8 +52,8 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     mapping (uint256 => string) private _tokenURIs;
  
     constructor() ERC721A("RabbitLeader", "RL") {
-        baseURI = "https://";
-        baseSuffix = ".ipfs.nftstorage.link";
+        baseURI = "https://ipfs.io/ipfs/QmUjFd8sLbvS7rCUEkqx7Wp51ByYxJSu3bYoFoMGLSNtW1";
+        baseSuffix = ".json";
     }
 
     // Modifier Ensure that the caller is a real user
@@ -90,11 +91,8 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         callerIsUers {
         require(isFreeMint, "The freeMint is Failed");
         require(quantity > 0 && quantity <= maxFreeMint);
-        unchecked {
-            uint currentFreeMintCounter = freeMintCounter;
-            if (currentFreeMintCounter + quantity <= maxFreeMint) revert AlreadyMaxFreeMint();   
-        }
-        if (totalSupply() + quantity <= maxSupply) revert AlreadyMaxSupply();
+        uint currentFreeMintCounter = freeMintCounter;
+        if (currentFreeMintCounter + quantity > maxFreeMint) revert AlreadyMaxFreeMint();   
         require(balanceOf(msg.sender) == 0, "The user had freeMint");
         
         _mint(msg.sender, quantity);
@@ -114,11 +112,9 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         mintPriceCompliance(quantity) {
         require(isPublicSale, "The publicSale is Failed");
         // Subtract the number of free mint parts
-        unchecked {
-            uint currentPublicMintCounter = publicMintCounter;
-            if (currentPublicMintCounter + quantity <= maxSupply - maxFreeMint) revert AlreadyMaxPublicMintSupply();   
-        }
-        if (totalSupply() + quantity <= maxSupply) revert AlreadyMaxSupply();
+        uint currentPublicMintCounter = publicMintCounter;
+        if (currentPublicMintCounter + quantity > maxSupply - maxFreeMint) revert AlreadyMaxPublicMintSupply();   
+        if (totalSupply() + quantity > maxSupply) revert AlreadyMaxSupply();
 
         // Use `mint` instead of `safeMint`, because there is no need to check.
         // see {Openzeppelin-onERC721Received}
@@ -143,7 +139,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
      * @dev Return the tokenURI for the `tokenid`
      * Redesigned tokenURI to be compatible with Rarible
      */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURIForMetaData(uint256 tokenId) public view virtual returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         string memory base_URI = _baseURI();
         string memory suffix = baseSuffix;
@@ -153,10 +149,12 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
                     abi.encodePacked(
                         base_URI,
                         _tokenURIs[tokenId],
-                        suffix)): '';
+                        suffix
+                        ))
+                : '';
     }
 
-    function _setTokenURI(uint256 tokenId, string memory cid) internal virtual onlyOwner {
+    function setTokenURI(uint256 tokenId, string memory cid) public virtual onlyOwner {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         _tokenURIs[tokenId] = cid;
     }
@@ -174,7 +172,7 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         isPublicSale = _publicSaleStatus;
     }
 
-    function setIsFreeMint(bool _isFreeMint) external onlyOwner {
+    function setFreeMint(bool _isFreeMint) external onlyOwner {
         isFreeMint = _isFreeMint;
     }
 
@@ -185,4 +183,5 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
     function setBaseURI(string memory baseURI_) external onlyOwner {
         baseURI = baseURI_;
     }
+
 }
