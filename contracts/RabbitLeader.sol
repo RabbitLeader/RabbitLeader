@@ -6,6 +6,7 @@ import "erc721a/contracts/ERC721A.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  *
@@ -28,32 +29,32 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 
 
-error AlreadyMaxFreeMint();
-error AlreadyMaxSupply();
-error AlreadyMaxPublicMintSupply();
-
 contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
+    error AlreadyMaxFreeMint();
+    error AlreadyMaxPublicMintSupply();
+
     using Address for address payable;
+    using Strings for uint256;
 
     uint256 public freeMintCounter;
     uint256 public publicMintCounter;
 
-    uint256 public constant maxSupply = 10000;
-    uint256 public constant maxFreeMint = 500;
-    uint256 public price = 0.02 ether;
+    uint256 public constant maxSupply = 1000;
+    uint256 public constant maxFreeMint = 100;
+    uint256 public constant maxMintForDev = 100;
+
+    uint256 public PRICE = 0.05 ether;
 
     bool private isPublicSale = false;
     bool private isFreeMint = false;
     bool private paused = false;
 
     string private baseURI;
-    string private baseSuffix;
-    // Optional mapping for token URIs
-    mapping (uint256 => string) private _tokenURIs;
+
+    mapping (address => bool) public freeMintList;
  
     constructor() ERC721A("RabbitLeader", "RL") {
-        baseURI = "https://ipfs.io/ipfs/QmUjFd8sLbvS7rCUEkqx7Wp51ByYxJSu3bYoFoMGLSNtW1";
-        baseSuffix = ".json";
+        baseURI = "https://bafybeicfii3duwatup37r3mce6dczslitqygbq44euurunmnrdb5wsbb4a";
     }
 
     // Modifier Ensure that the caller is a real user
@@ -64,13 +65,15 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
 
     // Modifier Stop of important contract functions in the event of an accident
     modifier lockRabbitLeader() {
-        require(!paused, "The RabbitLeader Contract had locked");
+        require(!paused, 
+            "The RabbitLeader Contract had locked");
         _;
     }
 
     // Modifier Calculate mint cost, cost = price * quantity
     modifier mintPriceCompliance(uint256 mintQuantity) {
-        require(msg.value >= price * mintQuantity);
+        require(totalSupply() + mintQuantity <= maxSupply, 
+            "Mint quantity had already maxSupply");
         _;
     }
 
@@ -80,23 +83,26 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
      * 
      * requirements:
      * - The user can only freeMint one `token`
-     * - Reject any contract to freeMint
+     * - Reject any (contract, bot) to freeMint
      */
-    function freeMint(
-        uint256 quantity
-    )
-        external payable
-        nonReentrant
-        lockRabbitLeader
-        callerIsUers {
-        require(isFreeMint, "The freeMint is Failed");
-        require(quantity > 0 && quantity <= maxFreeMint);
-        uint currentFreeMintCounter = freeMintCounter;
-        if (currentFreeMintCounter + quantity > maxFreeMint) revert AlreadyMaxFreeMint();   
-        require(balanceOf(msg.sender) == 0, "The user had freeMint");
-        
-        _mint(msg.sender, quantity);
-        ++freeMintCounter;
+    function freeMint() external payable nonReentrant lockRabbitLeader callerIsUers {
+        require(isFreeMint, 
+            "The freeMint is Failed");
+
+        require(!freeMintList[_msgSender()], 
+            "The user had freeMint");
+
+        unchecked {
+            uint currentFreeMintCounter = freeMintCounter;
+            if (currentFreeMintCounter > maxFreeMint) revert AlreadyMaxFreeMint();
+
+            freeMintList[_msgSender()] = true;
+            ++freeMintCounter;
+        }
+        // Use `mint` instead of `safeMint`, because there is no need to check.
+        // see {Openzeppelin-onERC721Received}
+        // `callerIsUers` make sure the recipient must be a real user
+        _mint(_msgSender(), 1);
     }
     
     /**
@@ -110,22 +116,35 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         nonReentrant
         lockRabbitLeader
         mintPriceCompliance(quantity) {
-        require(isPublicSale, "The publicSale is Failed");
-        // Subtract the number of free mint parts
-        uint currentPublicMintCounter = publicMintCounter;
-        if (currentPublicMintCounter + quantity > maxSupply - maxFreeMint) revert AlreadyMaxPublicMintSupply();   
-        if (totalSupply() + quantity > maxSupply) revert AlreadyMaxSupply();
+        require(isPublicSale, 
+            "The publicSale is Failed");
+        
+        require(quantity != 0, 
+            "The quantity was zero");
 
-        // Use `mint` instead of `safeMint`, because there is no need to check.
-        // see {Openzeppelin-onERC721Received}
-        // `callerIsUers` make sure the recipient must be a real user
-        _mint(msg.sender, quantity);
-        // gas saving
-        ++publicMintCounter;
+        unchecked {
+            // Subtract the number of free mint parts
+            uint currentPublicMintCounter = publicMintCounter;
+            if (currentPublicMintCounter + quantity > maxSupply - (maxFreeMint + maxMintForDev)) revert AlreadyMaxPublicMintSupply();
+            require(msg.value >= quantity * PRICE, "Need more value");
+            publicMintCounter = currentPublicMintCounter + quantity;
+        }
+        
+        _mint(_msgSender(), quantity);
     }
 
+    function mintForDev() external onlyOwner lockRabbitLeader mintPriceCompliance(maxMintForDev) {
+        uint quantity = maxMintForDev;
+        _mint(_msgSender(), quantity);
+    }
+
+
+    //function refundIfOver(uint256 price) private {
+      //  payable(_msgSender()).transfer(msg.value - PRICE);
+    //}
+
     function setPrice(uint _price) external onlyOwner {
-        price = _price;
+        PRICE = _price;
     }
 
     /**
@@ -139,24 +158,18 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
      * @dev Return the tokenURI for the `tokenid`
      * Redesigned tokenURI to be compatible with Rarible
      */
-    function tokenURIForMetaData(uint256 tokenId) public view virtual returns (string memory) {
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         string memory base_URI = _baseURI();
-        string memory suffix = baseSuffix;
-
         return bytes(baseURI).length != 0
                 ? string(
                     abi.encodePacked(
                         base_URI,
-                        _tokenURIs[tokenId],
-                        suffix
+                        ".ipfs.nftstorage.link/",
+                        tokenId.toString(),
+                        ".json"
                         ))
                 : '';
-    }
-
-    function setTokenURI(uint256 tokenId, string memory cid) public virtual onlyOwner {
-        if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
-        _tokenURIs[tokenId] = cid;
     }
 
     function withdraw() external onlyOwner lockRabbitLeader nonReentrant {
@@ -168,20 +181,15 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         paused = _paused;
     }
 
-    function setPublicSale(bool _publicSaleStatus) external onlyOwner {
-        isPublicSale = _publicSaleStatus;
+    function setPublicMint(bool _PublicMint) external onlyOwner {
+        isPublicSale = _PublicMint;
     }
 
     function setFreeMint(bool _isFreeMint) external onlyOwner {
         isFreeMint = _isFreeMint;
     }
 
-    function setBaseSuffix(string memory suffix) external onlyOwner {
-        baseSuffix = suffix;
-    }
-
     function setBaseURI(string memory baseURI_) external onlyOwner {
         baseURI = baseURI_;
     }
-
 }
