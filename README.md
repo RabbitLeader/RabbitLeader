@@ -71,17 +71,46 @@ npx hardhat test
 ```
 and you will see the following test results
 ```
- Test RabbitLeader
-    ✔ Should onlyOwner can set publicSale enable (855ms)
-    ✔ Should publicMint success (57ms)
-    ✔ Should return RabbitLeader symbol
-    ✔ Should return a tokenURI (54ms)
-    ✔ Should onlyOwner can withdraw contracts balances
-    ✔ Should allows the owner to paused the contract
-    ✔ Should not allow other owners to paused the contract
+  prepare environment
+    Test RabbitLeader NFT
+      tokenURI
+        ✔ Should be reverts when tokenId does not exist (42ms)
+      withdraw
+        ✔ Should withdraw found by the owner
+        ✔ Should be reverts withdraw found by the another user
+        ✔ Should be reverts paused RabbitLeader Contract to stop withdraw
+      paused
+        ✔ Should set paused by the owner
+        ✔ Should be reverts set paused by the another user
+      setFreeMint
+        ✔ Should setFreeMint paused by the owner
+        ✔ Should be reverts setFreeMint paused by the another user
+      setPublicMint
+        ✔ Should setPublicMint paused by the owner
+        ✔ Should be reverts setPublicMint paused by the owner
+      publicMint
+        ✔ Should send enough ether to mint RabbitLeader NFT (42ms)
+        ✔ Should be reverts when send not enough ether to mint RabbitLeader NFT
+        ✔ Should be reverts paused RabbitLeader Contract to stop publicMint
+      freeMint
+        ✔ Should only one freeMint can be submitted (38ms)
+        ✔ Should be reverts submit multiple freeMint
+        ✔ Should be reverts paused RabbitLeader Contract to stop freeMint
+      mintForDev
+        ✔ Should mintForDev by the owner (61ms)
+        ✔ Should be reverts mintForDev by the another user
+        ✔ Should be reverts paused RabbitLeader Contract to stop mintForDev
+      name
+        ✔ Should return RabbitLeader NFT name
+      setPrice
+        ✔ Should set setPrice by the owner
+        ✔ Should be reverts set setPrice by the another user
+      setBaseURI
+        ✔ Should set setBaseURI by the owner
+        ✔ Should be reverts set setBaseURI by the another user
 
 
-  7 passing (1s)
+  24 passing (3s)
 ```
 
 
