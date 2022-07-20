@@ -1785,8 +1785,8 @@ contract RabbitLeader is ERC721A, Ownable, ReentrancyGuard {
         _mint(_msgSender(), quantity);
     }
 
-    function mintForDev() external onlyOwner lockRabbitLeader mintPriceCompliance(maxMintForDev) {
-        uint quantity = maxMintForDev;
+    function mintForDev() external payable onlyOwner lockRabbitLeader mintPriceCompliance(maxMintForDev) {
+        uint256 quantity = maxMintForDev;
         _mint(_msgSender(), quantity);
     }
 
