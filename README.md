@@ -1,5 +1,17 @@
 # RabbitLeader NFT 
 
+## Introduction
+
+### Use IPFS Storage
+Use the API interface provided by **nft.storage** uploads pixel images and metadata.
+Then initialize the tokenuri in the smart contract.
+
+
+
+
+
+
+
 ## **Usage**
 ### Testnet:
 - [Opensea](https://testnets.opensea.io/collection/rabbitleader-iosiy7adfd)
