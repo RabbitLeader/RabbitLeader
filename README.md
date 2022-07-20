@@ -1,11 +1,12 @@
 # RabbitLeader NFT 
 
 ## Introduction
-
-### Use IPFS Storage
-Use the API interface provided by **nft.storage** uploads pixel images and metadata.
+- Use the API interface provided by **nft.storage** uploads pixel images and metadata.
 Then initialize the tokenuri in the smart contract.
 
+- RabbitLeader is based on a collection of 48x48 pixel nft
+
+- Bulk mint through ERC711A standard to reduce significant gas costs
 
 
 
