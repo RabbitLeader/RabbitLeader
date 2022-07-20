@@ -15,8 +15,8 @@ Then initialize the tokenuri in the smart contract.
 
 ## **Usage**
 ### Testnet:
-- [Opensea](https://testnets.opensea.io/collection/rabbitleader-iosiy7adfd)
-- [RabbitLeader Contract](https://mumbai.polygonscan.com/address/0x32178cb895f1168e3617eb0010e241c6ade1d140)
+- [Opensea](https://testnets.opensea.io/collection/rabbitleader-tcpniyely7)
+- [RabbitLeader Contract](https://mumbai.polygonscan.com/address/0xb7af20629fa4958e31d311a2d632ad6920dffd5b)
 
 ## **Environment condition**
 - ### hardhat
